@@ -1,4 +1,4 @@
-**Bypassing AI Guardrails: Red Teaming TryHackMe's Prompt Security Room**
+# TryHackMe — Bypassing AI Guardrails
 
 **Author:** Harshwardhan Tiwari
 **CTF:** `h4rsh0x`
@@ -171,3 +171,4 @@ Interested in:
 `Cybersecurity • AI Security • Prompt Injection • CTFs • AI/ML`
 
 GitHub: https://github.com/harshwt
+
