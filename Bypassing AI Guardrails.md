@@ -1,4 +1,4 @@
-# TryHackMe — Bypassing AI Guardrails
+# Bypassing AI Guardrails: TryHackme's Prompt Security Room
 
 **Author:** Harshwardhan Tiwari
 **CTF:** `h4rsh0x`
