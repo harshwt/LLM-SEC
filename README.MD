@@ -1,18 +1,18 @@
-﻿# ≡ƒöÉ LLM Security Lab
+# 🔐 LLM Security Lab
 
 > Learning LLM Security, one experiment at a time.
 
-Welcome! ≡ƒæï
+Welcome! 👋
 
-This repository is my personal journey into the world of **LLM (Large Language Model) Security**. Instead of just collecting notes, I wanted to build something practicalΓÇöa place where I can document concepts, recreate attacks, build defenses, and share everything I learn along the way.
+This repository is my personal journey into the world of **LLM (Large Language Model) Security**. Instead of just collecting notes, I wanted to build something practical—a place where I can document concepts, recreate attacks, build defenses, and share everything I learn along the way.
 
 Whether you're just getting started or already exploring AI security, I hope this repository helps you learn something new.
 
-> **Learn ΓåÆ Break ΓåÆ Understand ΓåÆ Defend**
+> **Learn → Break → Understand → Defend**
 
 ---
 
-## ≡ƒÜÇ Why this repository?
+## 🚀 Why this repository?
 
 LLMs are becoming part of search engines, chatbots, coding assistants, AI agents, and enterprise applications. As they become more powerful, they also introduce new security challenges.
 
@@ -28,37 +28,33 @@ Everything here is focused on understanding these problems through simple explan
 
 ---
 
-## ≡ƒôé What you'll find here
+## 📂 What you'll find here
 
 ```
-llm-security-lab/
-Γöé
-Γö£ΓöÇΓöÇ 01-basics/
-Γö£ΓöÇΓöÇ 02-prompt-injection/
-Γö£ΓöÇΓöÇ 03-jailbreaking/
-Γö£ΓöÇΓöÇ 04-rag-security/
-Γö£ΓöÇΓöÇ 05-agent-security/
-Γö£ΓöÇΓöÇ 06-defensive-techniques/
-Γö£ΓöÇΓöÇ 07-tools/
-Γö£ΓöÇΓöÇ 08-labs/
-Γö£ΓöÇΓöÇ resources/
-ΓööΓöÇΓöÇ README.md
-```
+LLM-SEC/
+│
+├── supply-chain/                 # TryHackMe: AI Supply Chain Security Lab
+├── Bypassing AI Guardrails.md    # Techniques on circumventing LLM guardrails
+├── LLM-Forensics                 # Artifacts and research on LLM forensics
+└── README.MD                     # This file
+`
+
+*(More labs and modules coming soon!)*``
 
 Each folder contains a mix of:
 
-- ≡ƒôû Easy-to-understand notes
-- ≡ƒÆ╗ Practical examples
-- ≡ƒº¬ Hands-on labs
-- ≡ƒ¢á∩╕Å Small projects
-- ≡ƒöì Security research
-- ≡ƒôÜ Useful resources
+- 📖 Easy-to-understand notes
+- 💻 Practical examples
+- 🧪 Hands-on labs
+- 🛠️ Small projects
+- 🔍 Security research
+- 📚 Useful resources
 
 ---
 
-## ≡ƒôÜ Topics
+## 📚 Topics
 
-### ≡ƒºá Foundations
+### 🧠 Foundations
 
 - How LLMs work
 - Tokens & embeddings
@@ -66,7 +62,7 @@ Each folder contains a mix of:
 - Context windows
 - Prompt engineering
 
-### ≡ƒÜ¿ Attacks
+### 🚨 Attacks
 
 - Prompt Injection
 - Indirect Prompt Injection
@@ -76,7 +72,7 @@ Each folder contains a mix of:
 - Hallucination Abuse
 - Data Exfiltration
 
-### ≡ƒñû AI Agent Security
+### 🤖 AI Agent Security
 
 - Tool misuse
 - Function calling attacks
@@ -84,14 +80,14 @@ Each folder contains a mix of:
 - Cross-agent prompt injection
 - API abuse
 
-### ≡ƒôä RAG Security
+### 📄 RAG Security
 
 - Document poisoning
 - Vector database attacks
 - Hidden prompts
 - Retrieval manipulation
 
-### ≡ƒ¢í∩╕Å Defenses
+### 🛡️ Defenses
 
 - Guardrails
 - Prompt isolation
@@ -103,7 +99,7 @@ Each folder contains a mix of:
 
 ---
 
-## ≡ƒº¬ Labs
+## 🧪 Labs
 
 This repository isn't just theory.
 
@@ -120,7 +116,7 @@ Most labs are designed to be beginner-friendly and reproducible.
 
 ---
 
-## ≡ƒ¢á∩╕Å Tools
+## 🛠️ Tools
 
 Throughout this journey, I'll be experimenting with tools like:
 
@@ -134,7 +130,7 @@ Throughout this journey, I'll be experimenting with tools like:
 
 ---
 
-## ≡ƒÄ» Learning Goals
+## 🎯 Learning Goals
 
 - [ ] Understand how LLMs work
 - [ ] Learn common attack techniques
@@ -146,7 +142,7 @@ Throughout this journey, I'll be experimenting with tools like:
 
 ---
 
-## ≡ƒñ¥ Want to contribute?
+## 🤝 Want to contribute?
 
 If you notice an error, have an idea for a new lab, or want to improve an explanation, feel free to open an issue or submit a pull request.
 
@@ -154,17 +150,16 @@ Learning is always better together.
 
 ---
 
-## ΓÜá∩╕Å Disclaimer
+## ⚠️ Disclaimer
 
 This repository is created for **educational and research purposes only**.
 
-All demonstrations should be performed in environments where you have permission to test. The content is intended to help developers, researchers, and security enthusiasts understand LLM securityΓÇönot to misuse these techniques.
+All demonstrations should be performed in environments where you have permission to test. The content is intended to help developers, researchers, and security enthusiasts understand LLM security—not to misuse these techniques.
 
 ---
 
-## Γ¡É If you found this useful...
+## ⭐ If you found this useful...
 
-Consider giving the repository a Γ¡É.
+Consider giving the repository a ⭐.
 
 It motivates me to keep learning, experimenting, and sharing more about AI Security.
-
